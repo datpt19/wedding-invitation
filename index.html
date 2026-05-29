@@ -256,8 +256,6 @@ body{zoom:1}
 </div>
 </section>
 
-<div class="ornament-divider reveal">— ✦ —</div>
-
 <!-- Tran trong bao tin -->
 <section class="announcement reveal">
 <p class="subtitle">Trân Trọng Báo Tin<br>Lễ Thành Hôn Của Con Chúng Tôi</p>
@@ -409,12 +407,23 @@ e.stopPropagation();
 if(window._mp){au.pause();setPaused();}
 else{au.play().catch(function(){});setPlaying();}
 });
-// Auto-play music immediately
-au.play().then(function(){setPlaying();}).catch(function(){
-// Browser blocked autoplay, try on first user interaction
+// Trick: play muted first (Chrome allows muted autoplay), then unmute on interaction
+au.muted=true;au.volume=1;
+au.play().then(function(){
+setPlaying();
+// Unmute on first interaction
+var umEvts=['click','touchstart','scroll','mousemove','keydown','pointerdown'];
+function unmute(){
+au.muted=false;
+umEvts.forEach(function(ev){document.removeEventListener(ev,unmute);});
+}
+umEvts.forEach(function(ev){document.addEventListener(ev,unmute,{once:false,passive:true});});
+}).catch(function(){
+// Even muted autoplay blocked — fallback to interaction
 var evts=['click','touchstart','scroll','keydown','mousemove','pointerdown'];
 function autoPlayMusic(e){
 if(e.target===mb)return;
+au.muted=false;
 au.play().then(function(){setPlaying();removeAll();}).catch(function(){});
 }
 function removeAll(){evts.forEach(function(ev){document.removeEventListener(ev,autoPlayMusic);});}
