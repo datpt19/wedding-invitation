@@ -189,7 +189,7 @@ body{background:var(--bg);color:rgb(153,98,71);font:400 18px/1.6 var(--font-body
 /* ─── Tablet ─── */
 @media(max-width:768px){
 body{zoom:1.15}
-.hero-cover{padding:48px 24px;height:100svh;height:100vh}
+.hero-cover{padding:40px 24px;height:100svh;height:100vh}
 .hero-cover .hero-bg{width:65%;bottom:-5%;right:-10%}
 .family-cols{gap:24px}
 .ceremony-time,.family-info,.announcement,.album,.timeline-section,.guestbook,.footer{padding:40px 0}
@@ -408,11 +408,7 @@ người trong buổi tiệc ấm cúng này.
 <textarea id="wishText" rows="3" placeholder="Viết lời chúc cho cô dâu chú rể..."></textarea>
 <button type="button" class="submit-btn" id="wishBtn">Gửi Lời Chúc</button>
 </div>
-<div class="wishes-list" id="wishesList">
-<div class="wish-card"><p class="wish-name">Bùi Thanh Tùng</p><span class="wish-date">29/05/2026</span><button class="wish-del" onclick="this.parentElement.remove()">✕</button><p class="wish-text">Anh chúc hai em trăm năm hạnh phúc, luôn yêu thương và đồng hành cùng nhau. Cố gắng xây dựng tổ ấm thật vững bền nhé!</p></div>
-<div class="wish-card"><p class="wish-name">Vũ Minh Hoàng</p><span class="wish-date">29/05/2026</span><button class="wish-del" onclick="this.parentElement.remove()">✕</button><p class="wish-text">Chúc hai em hạnh phúc trọn đời, sớm có tin vui cho cả nhà mừng. Anh rất vui vì em đã tìm được người bạn đời xứng đáng!</p></div>
-<div class="wish-card"><p class="wish-name">Giáp Ngọc Hiếu</p><span class="wish-date">29/05/2026</span><button class="wish-del" onclick="this.parentElement.remove()">✕</button><p class="wish-text">Ông bà anh chị ơi, cuối cùng cũng chịu cưới! Chúc hai đứa hạnh phúc, đừng quên anh em nhé 😄</p></div>
-</div>
+<div class="wishes-list" id="wishesList"></div>
 </section>
 
 
@@ -505,19 +501,7 @@ evts.forEach(function(ev){window.removeEventListener(ev,stopAutoScroll);});
 evts.forEach(function(ev){window.addEventListener(ev,stopAutoScroll,{passive:true});});
 }
 
-// Guestbook
-document.getElementById('wishBtn').addEventListener('click',function(){
-var n=document.getElementById('wishName').value.trim();
-var t=document.getElementById('wishText').value.trim();
-if(!n||!t)return;
-var d=new Date().toLocaleDateString('vi-VN');
-var card=document.createElement('div');
-card.className='wish-card';
-card.innerHTML='<p class="wish-name">'+n+'</p><span class="wish-date">'+d+'</span><button class="wish-del" onclick="this.parentElement.remove()">✕</button><p class="wish-text">'+t+'</p>';
-document.getElementById('wishesList').prepend(card);
-document.getElementById('wishName').value='';
-document.getElementById('wishText').value='';
-});
+// Guestbook — handled by Firebase module script below
 // Album grid → lightbox
 var lb=document.getElementById('lightbox');
 var lbPhoto=document.getElementById('lbPhoto');
@@ -533,6 +517,57 @@ document.getElementById('lbClose').addEventListener('click',function(){lb.classL
 document.getElementById('lbPrev').addEventListener('click',function(){showLb((lbIdx-1+9)%9);});
 document.getElementById('lbNext').addEventListener('click',function(){showLb((lbIdx+1)%9);});
 lb.addEventListener('click',function(e){if(e.target===lb){lb.classList.remove('active');document.body.style.overflow='';}});
+</script>
+
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyCjkdB-nz1EZPcyh-4rubhsj1UrJnAmvQ0",
+  authDomain: "wedding-invitation-77d87.firebaseapp.com",
+  projectId: "wedding-invitation-77d87",
+  storageBucket: "wedding-invitation-77d87.firebasestorage.app",
+  messagingSenderId: "466072678542",
+  appId: "1:466072678542:web:f120acc6652aabe57299df",
+  measurementId: "G-66B376HWFC"
+});
+
+const db = getFirestore(app);
+const wishesRef = collection(db, "wishes");
+const wishesList = document.getElementById("wishesList");
+
+// Render a wish card
+function renderWish(id, data) {
+  var card = document.createElement("div");
+  card.className = "wish-card";
+  card.setAttribute("data-id", id);
+  var date = data.createdAt ? data.createdAt.toDate().toLocaleDateString("vi-VN") : "";
+  card.innerHTML = '<p class="wish-name">' + data.name + '</p><span class="wish-date">' + date + '</span><button class="wish-del">✕</button><p class="wish-text">' + data.text + '</p>';
+  card.querySelector(".wish-del").addEventListener("click", function() {
+    deleteDoc(doc(db, "wishes", id));
+  });
+  return card;
+}
+
+// Listen for realtime updates
+onSnapshot(query(wishesRef, orderBy("createdAt", "desc")), function(snapshot) {
+  wishesList.innerHTML = "";
+  snapshot.forEach(function(d) {
+    wishesList.appendChild(renderWish(d.id, d.data()));
+  });
+});
+
+// Add wish
+document.getElementById("wishBtn").addEventListener("click", function() {
+  var n = document.getElementById("wishName").value.trim();
+  var t = document.getElementById("wishText").value.trim();
+  if (!n || !t) return;
+  addDoc(wishesRef, { name: n, text: t, createdAt: serverTimestamp() });
+  document.getElementById("wishName").value = "";
+  document.getElementById("wishText").value = "";
+});
 </script>
 
 
